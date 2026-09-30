@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Classroom Visual Schedule</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="board" class="board">
+    <div class="topbar">
+      <div class="time" id="currentTime">--:-- --</div>
+
+      <div class="topbar-actions">
+        <div class="tools-menu" id="toolsMenu">
+          <button class="btn" id="btnTools">Tools ▾</button>
+          <div class="tools-dropdown hidden" id="toolsDropdown">
+            <button class="tools-item" id="toolsCoreBoard">Core Board</button>
+            <button class="tools-item" id="toolsWhosHere">Who's here</button>
+          </div>
+        </div>
+        <button class="btn" id="btnVideos">Videos</button>
+        <button class="btn" id="btnMeetings">Meetings</button>
+        <button class="btn" id="btnWebsites">Websites</button>
+        <div class="settings-menu" id="settingsMenu">
+          <button class="btn" id="btnSettings" aria-expanded="false" aria-haspopup="true" aria-controls="settingsPanel">Settings ▾</button>
+          <div class="settings-panel hidden" id="settingsPanel">
+            <div class="settings-section">
+              <div class="settings-section-title">Schedule Editing</div>
+              <label class="settings-toggle" for="toggleEditMode">
+                <input type="checkbox" id="toggleEditMode" />
+                <span>Edit Schedule</span>
+              </label>
+              <button class="btn btn-danger settings-action hidden" id="btnReset">Reset Schedule</button>
+            </div>
+            <div class="settings-section">
+              <div class="settings-section-title">Schedule Display</div>
+              <label class="settings-toggle" for="toggleShowFullSchedule">
+                <input type="checkbox" id="toggleShowFullSchedule" />
+                <span>Show Full Schedule</span>
+              </label>
+              <label class="settings-toggle" for="toggleShowNowNext">
+                <input type="checkbox" id="toggleShowNowNext" />
+                <span>Show Now / Next</span>
+              </label>
+              <label class="settings-toggle" for="toggleSubstitute">
+                <input type="checkbox" id="toggleSubstitute" />
+                <span>Substitute</span>
+              </label>
+            </div>
+            <div class="settings-section">
+              <div class="settings-section-title">School Day</div>
+              <label class="settings-field" for="inputDayEnd">
+                <span>Day ends at</span>
+                <input type="time" id="inputDayEnd" class="settings-time" />
+              </label>
+              <label class="settings-toggle" for="toggleRunOnWeekends">
+                <input type="checkbox" id="toggleRunOnWeekends" />
+                <span>Run on weekends</span>
+              </label>
+            </div>
+            <div class="settings-section">
+              <div class="settings-section-title">Bathroom Timers</div>
+              <label class="settings-toggle" for="toggleBathroom">
+                <input type="checkbox" id="toggleBathroom" />
+                <span>Show bathroom timers</span>
+              </label>
+              <button class="btn settings-action" id="btnBathroomSetup">Set up bathroom timers</button>
+            </div>
+            <div class="settings-section">
+              <div class="settings-section-title">Backup</div>
+              <button class="btn settings-action" id="btnExport">Export Schedule</button>
+              <button class="btn settings-action" id="btnImport">Import Schedule</button>
+              <input type="file" id="importFile" accept="application/json,.json" hidden />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div id="scheduleGrid" class="schedule-grid" aria-label="Schedule"></div>
+    </div>
+
+    <button class="sound-btn hidden" id="btnSound" aria-label="Turn on transition sound">🔈 Tap to turn on sound</button>
+
+    <div id="currentBox" class="current-box" role="region" aria-label="Current and next activity">
+      <div class="current-now">
+        <div class="timer-disk" id="timerDisk"></div>
+        <div class="current-content">
+          <div class="current-label">NOW</div>
+          <img id="currentIcon" class="current-icon" alt="" />
+          <div id="currentName" class="current-name">-</div>
+          <div class="timer-center-readout" id="timerCenterReadout">--:--</div>
+          <div id="currentRemaining" class="current-remaining hidden">-</div>
+          <button class="btn details-btn hidden" id="btnDetails">Details</button>
+        </div>
+      </div>
+      <div class="current-next">
+        <div class="current-label">NEXT</div>
+        <img id="nextIcon" class="current-icon" alt="" />
+        <div id="nextName" class="current-name">-</div>
+      </div>
+      <div class="current-hint">Drag me</div>
+      <div class="timer-resize" id="timerResize"></div>
+    </div>
+
+    <section class="bathroom-box hidden" id="bathroomBox" aria-label="Bathroom timers">
+      <div class="bathroom-head">🚻 Bathroom</div>
+      <div class="bathroom-list" id="bathroomList"></div>
+      <div class="bathroom-status hidden" id="bathroomStatus"></div>
+    </section>
+
+    <button class="subs-launcher hidden" id="subsLauncher" aria-label="Open substitute teacher directions">
+      <span class="subs-launcher-mark" aria-hidden="true">?</span>
+      <span class="subs-launcher-label">Subs click here</span>
+    </button>
+
+<div class="modal-overlay hidden" id="videosOverlay" role="dialog" aria-modal="true">
+  <div class="modal" aria-label="Video library">
+    <div class="modal-header">
+      <div class="modal-title">Video Library</div>
+      <button class="xbtn" id="closeVideos">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="video-grid" id="videoButtons"></div>
+    </div>
+
+    <!-- resize handle -->
+    <div class="modal-resize" id="videosResize"></div>
+  </div>
+</div>
+
+    <div class="modal-overlay hidden" id="meetingsOverlay" role="dialog" aria-modal="true">
+      <div class="modal" aria-label="Meetings">
+        <div class="modal-header">
+          <div class="modal-title">Meetings</div>
+          <button class="xbtn" id="closeMeetings">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="meetings-list">
+            <button class="btn btn-yellow" id="openMorningSlides">Morning Meeting Slides</button>
+            <button class="btn btn-yellow" id="openAfternoonSlides">Afternoon Meeting Slides</button>
+            <button class="btn btn-yellow" id="openPowerSchool">PowerSchool</button>
+            <div class="hint" id="afternoonHint"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="editOverlay" role="dialog" aria-modal="true">
+      <div class="modal edit-modal" aria-label="Edit activity">
+        <div class="modal-header">
+          <div class="modal-title" id="editTitle">Edit Activity</div>
+          <button class="xbtn" id="closeEdit">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="edit-actions">
+            <input id="symbolQuery" class="text-input" placeholder="Search symbols (e.g., 'math', 'recess')" />
+            <div class="edit-buttons">
+              <button class="btn btn-yellow" id="btnSearchCurrent">Search to Current Activity</button>
+              <button class="btn btn-yellow" id="btnChangeName">Change Name</button>
+              <button class="btn btn-yellow" id="btnSearchSymbols">Change Symbol</button>
+            </div>
+          </div>
+
+          <div class="spinner hidden" id="symbolSpinner">Loading…</div>
+          <div class="error hidden" id="symbolError">No symbols found.</div>
+
+          <div class="symbol-grid" id="symbolResults"></div>
+
+          <div class="hint">Tip: Click a symbol to apply immediately.</div>
+
+          <hr class="edit-divider" />
+          <div class="mini-schedule-section">
+            <div class="mini-schedule-header">
+              <span class="mini-schedule-title">Mini-Schedule Steps</span>
+              <button class="btn btn-yellow" id="btnAddStep">Add Step</button>
+            </div>
+            <div id="stepsEditor" class="steps-editor"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Websites modal -->
+    <div class="modal-overlay hidden" id="websitesOverlay" role="dialog" aria-modal="true">
+      <div class="modal" aria-label="Websites">
+        <div class="modal-header">
+          <div class="modal-title">Websites</div>
+          <button class="xbtn" id="closeWebsites">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="meetings-list">
+            <button class="btn btn-yellow" id="openWebPowerSchool">PowerSchool</button>
+            <button class="btn btn-yellow" id="openClassroomTimer">Classroom Timer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Classroom Timer modal -->
+    <div class="modal-overlay hidden" id="timerPickerOverlay" role="dialog" aria-modal="true">
+      <div class="modal" aria-label="Classroom Timer">
+        <div class="modal-header">
+          <div class="modal-title">Classroom Timer</div>
+          <button class="xbtn" id="closeTimerPicker">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="timer-grid" id="timerButtons"></div>
+        </div>
+        <div class="modal-resize" id="timerPickerResize"></div>
+      </div>
+    </div>
+
+    <!-- Bathroom timer: QR + reset for one student -->
+    <div class="modal-overlay hidden" id="bathroomQrOverlay" role="dialog" aria-modal="true" aria-labelledby="bathroomQrTitle">
+      <div class="modal bathroom-qr-modal">
+        <div class="modal-header">
+          <div class="modal-title" id="bathroomQrTitle">Bathroom</div>
+          <button class="xbtn" id="closeBathroomQr" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body bathroom-qr-body">
+          <div class="bathroom-qr-code" id="bathroomQrCode"></div>
+          <div class="bathroom-qr-due" id="bathroomQrDue"></div>
+          <div class="hint" id="bathroomQrNote"></div>
+          <button class="btn btn-yellow" id="btnBathroomReset">Reset now</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bathroom timer setup -->
+    <div class="modal-overlay hidden" id="bathroomSetupOverlay" role="dialog" aria-modal="true" aria-labelledby="bathroomSetupTitle">
+      <div class="modal bathroom-setup-modal">
+        <div class="modal-header">
+          <div class="modal-title" id="bathroomSetupTitle">Bathroom Timers</div>
+          <button class="xbtn" id="closeBathroomSetup" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body bathroom-setup-body">
+          <label class="bathroom-field">
+            <span>Minutes between trips</span>
+            <input type="number" id="bathroomInterval" class="text-input bathroom-number" min="5" max="600" step="5" />
+          </label>
+
+          <div class="bathroom-setup-heading">Students</div>
+          <div class="hint">Use initials only. Each timer starts at that student's first logged trip of the day.</div>
+          <div id="bathroomStudents" class="bathroom-students"></div>
+          <button class="btn btn-yellow" id="btnBathroomAdd">Add student</button>
+
+          <div class="bathroom-setup-heading">QR codes (Google Sheet)</div>
+          <div class="hint">To reset timers by scanning with a phone, connect a Google Sheet. Step-by-step setup is in the README.</div>
+          <label class="bathroom-field bathroom-field-stack">
+            <span>Secret code (paste into the Apps Script)</span>
+            <span class="bathroom-inline">
+              <input id="bathroomKey" class="text-input" readonly />
+              <button class="btn" id="btnBathroomCopyKey">Copy</button>
+            </span>
+          </label>
+          <label class="bathroom-field bathroom-field-stack">
+            <span>Web app link</span>
+            <input id="bathroomEndpoint" class="text-input" placeholder="https://script.google.com/macros/s/…/exec" />
+          </label>
+          <div class="bathroom-conn" id="bathroomConnStatus"></div>
+          <div class="edit-buttons">
+            <button class="btn" id="btnBathroomTest">Test connection</button>
+            <button class="btn btn-yellow" id="btnBathroomPrint">Print QR codes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="floatLayer" class="float-layer" aria-label="Floating windows"></div>
+  </div>
+
+  <script src="./qrcode.js"></script>
+  <script src="./app.js"></script>
+  <script src="./bathroom.js"></script>
+</body>
+</html>

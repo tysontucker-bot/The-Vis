@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Bathroom trip</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root{ --bg:#8BC34A; --yellow:#FFD54F; --border:#000; }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0; min-height:100vh; min-height:100dvh;
+      display:flex; align-items:center; justify-content:center;
+      background:var(--bg); font-family:Nunito, Arial, sans-serif; color:#111; padding:20px;
+    }
+    .card{
+      width:min(420px, 100%); background:#fff; border:6px solid var(--border);
+      border-radius:22px; padding:28px 22px; text-align:center;
+    }
+    .mark{ font-size:4.5rem; line-height:1; }
+    .name{
+      display:inline-block; margin:12px 0 4px; padding:4px 22px; border-radius:999px;
+      background:var(--yellow); border:3px solid var(--border); font-weight:900; font-size:2rem;
+    }
+    h1{ font-size:1.5rem; margin:10px 0 6px; font-weight:900; }
+    p{ font-size:1.1rem; font-weight:700; margin:6px 0; }
+    button{
+      margin-top:18px; font:inherit; font-weight:900; font-size:1.1rem;
+      padding:12px 22px; border-radius:12px; border:3px solid var(--border);
+      background:var(--yellow); cursor:pointer;
+    }
+    button:focus-visible{ outline:4px solid #1565c0; outline-offset:3px; }
+    .hidden{ display:none; }
+  </style>
+</head>
+<body>
+  <main class="card" aria-live="polite">
+    <div class="mark" id="mark">⏳</div>
+    <div class="name hidden" id="name"></div>
+    <h1 id="title">Logging bathroom trip…</h1>
+    <p id="detail"></p>
+    <button class="hidden" id="again">Log another trip</button>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const student = params.get("s");
+    const label = params.get("n") || "";
+    const key = params.get("k");
+    const endpoint = params.get("e");
+    const $ = id => document.getElementById(id);
+    const RECENT_KEY = "sched:scanRecent:" + student;
+
+    if (label) { $("name").textContent = label; $("name").classList.remove("hidden"); }
+
+    function show(mark, title, detail, showAgain){
+      $("mark").textContent = mark;
+      $("title").textContent = title;
+      $("detail").textContent = detail || "";
+      $("again").classList.toggle("hidden", !showAgain);
+    }
+
+    function clock(d){
+      return new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit" }).format(d);
+    }
+
+    async function logTrip(){
+      show("⏳", "Logging bathroom trip…", "", false);
+      let url;
+      try {
+        url = new URL(endpoint);
+        if (url.protocol !== "https:" || url.hostname !== "script.google.com") throw new Error("bad host");
+      } catch {
+        show("⚠️", "This QR code isn't set up right", "Print a new code from Sched → Settings → Set up bathroom timers.", false);
+        return;
+      }
+      url.searchParams.set("action", "reset");
+      url.searchParams.set("student", student);
+      url.searchParams.set("label", label);
+      url.searchParams.set("key", key);
+      url.searchParams.set("source", "qr");
+      try {
+        const res = await fetch(url.toString(), { cache: "no-store" });
+        const data = await res.json();
+        if (!data.ok) {
+          show("⚠️", "Not logged", data.error === "wrong-code"
+            ? "The secret code on this QR doesn't match the Sheet. Print new codes from Sched."
+            : "The Sheet didn't accept the trip. Try again, or reset the timer on the board.", true);
+          return;
+        }
+        const now = new Date();
+        localStorage.setItem(RECENT_KEY, String(now.getTime()));
+        show("✅", "Bathroom trip logged", `${clock(now)}. The board timer will reset in a few seconds.`, false);
+      } catch {
+        show("⚠️", "Couldn't reach the Sheet", "Check the phone's internet connection and try again, or reset the timer on the board.", true);
+      }
+    }
+
+    $("again").addEventListener("click", logTrip);
+
+    if (!student || !key || !endpoint) {
+      show("⚠️", "This QR code is missing information", "Print a new code from Sched → Settings → Set up bathroom timers.", false);
+    } else {
+      // Guard against reloading the page and logging the same trip twice
+      const recent = Number(localStorage.getItem(RECENT_KEY) || 0);
+      if (Date.now() - recent < 2 * 60 * 1000) {
+        show("✅", "Already logged", `This trip was logged at ${clock(new Date(recent))}. Only log again for a new trip.`, true);
+      } else {
+        logTrip();
+      }
+    }
+  </script>
+</body>
+</html>
