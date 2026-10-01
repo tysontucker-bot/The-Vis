@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="robots" content="noindex" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Bathroom" />
+  <meta name="theme-color" content="#FFD54F" />
+  <title>Bathroom</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🚻%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root{ --bg:#8BC34A; --yellow:#FFD54F; --border:#000; }
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; }
+    body{
+      min-height:100vh; min-height:100dvh; background:var(--bg);
+      font-family:Nunito, Arial, sans-serif; color:#111;
+      padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);
+    }
+    header{
+      position:sticky; top:0; z-index:5; background:var(--yellow);
+      border-bottom:5px solid var(--border); padding:12px 16px;
+      padding-top:calc(12px + env(safe-area-inset-top,0px)); margin-top:calc(-1 * env(safe-area-inset-top,0px));
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    h1{ margin:0; font-size:1.4rem; font-weight:900; }
+    .sync{ font-size:.85rem; font-weight:800; color:#444; text-align:right; }
+    .sync[data-state="error"]{ color:#b71c1c; }
+    main{ padding:14px; display:flex; flex-direction:column; gap:12px; max-width:560px; margin:0 auto; }
+    .student{
+      background:#fff; border:5px solid var(--border); border-radius:18px;
+      display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px; padding:12px 12px 12px 14px;
+    }
+    .student[data-status="soon"]{ background:#fff8d6; }
+    .student[data-status="overdue"]{ background:#ffe1e1; }
+    .who{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+    .chip{
+      align-self:flex-start; color:#fff; font-weight:900; font-size:1.3rem;
+      padding:2px 14px; border-radius:999px;
+    }
+    .time{ font-weight:900; font-size:1.15rem; font-variant-numeric:tabular-nums; }
+    .student[data-status="overdue"] .time{ color:#c62828; }
+    .student[data-status="waiting"] .time{ color:#666; font-size:1rem; }
+    .last{ font-size:.85rem; font-weight:700; color:#555; }
+    .done{
+      font:inherit; font-weight:900; font-size:1.15rem; min-width:118px; min-height:64px;
+      border:4px solid var(--border); border-radius:14px; background:var(--yellow); color:#111;
+      cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+    }
+    .done:active{ transform:scale(.97); }
+    .done[data-confirm="1"]{ background:#43a047; color:#fff; }
+    .done:disabled{ opacity:.6; }
+    .done:focus-visible{ outline:4px solid #1565c0; outline-offset:3px; }
+    .toast{
+      position:fixed; left:50%; bottom:calc(18px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%);
+      background:#111; color:#fff; font-weight:800; padding:12px 18px; border-radius:999px;
+      box-shadow:0 4px 14px rgba(0,0,0,.3); max-width:92vw; text-align:center;
+      opacity:0; pointer-events:none; transition:opacity .2s;
+    }
+    .toast.show{ opacity:1; }
+    .message{ background:#fff; border:5px solid var(--border); border-radius:18px; padding:20px; font-weight:800; text-align:center; }
+    .tip{ font-size:.9rem; font-weight:700; color:#222; text-align:center; padding:4px 10px 16px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🚻 Bathroom</h1>
+    <div class="sync" id="sync" aria-live="polite">Connecting…</div>
+  </header>
+  <main id="list"></main>
+  <div class="tip" id="tip">Tap <b>Done</b>, then tap again to confirm.</div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const POLL_MS = 15000, WARN_MIN = 15, CONFIRM_MS = 3000;
+    const $ = id => document.getElementById(id);
+    let config = null, serverLast = {}, lastSync = null;
+
+    // The setup link carries everything this page needs, so a home-screen shortcut keeps working on its own
+    function readConfig(){
+      const q = new URLSearchParams(location.search);
+      const e = q.get("e") || "", k = q.get("k"), s = q.get("s");
+      if (!e || !k || s === null) return null;
+      const endpoint = /^[\w-]+$/.test(e) ? `https://script.google.com/macros/s/${e}/exec` : e;
+      if (!/^https:\/\/script\.google\.com\//.test(endpoint)) return null;
+      const students = s ? s.split("*").map(part => {
+        const [id, label, color] = part.split(".");
+        return { id, label: label || id, color: /^[0-9a-f]{6}$/i.test(color || "") ? "#" + color : "#1e88e5" };
+      }).filter(x => x.id) : [];
+      return { endpoint, key: k, intervalMin: Number(q.get("i")) > 0 ? Number(q.get("i")) : 120, students };
+    }
+
+    function ctParts(d){
+      const parts = new Intl.DateTimeFormat("en-US", { timeZone:"America/Chicago", hour:"2-digit", minute:"2-digit", hour12:false }).formatToParts(d);
+      const get = t => parseInt(parts.find(p => p.type === t)?.value || "0", 10);
+      return { hour: get("hour") % 24, minute: get("minute") };
+    }
+    function midnightCT(now){
+      const ct = ctParts(now);
+      return Math.floor(now.getTime() / 60000) * 60000 - (ct.hour * 60 + ct.minute) * 60000;
+    }
+    function clock(ms){
+      return new Intl.DateTimeFormat("en-US", { timeZone:"America/Chicago", hour:"numeric", minute:"2-digit" }).format(new Date(ms));
+    }
+    function formatRemaining(ms){
+      if (ms <= 0) { const over = Math.floor(-ms / 60000); return over < 1 ? "Due now" : `${over} min over`; }
+      const t = Math.ceil(ms / 1000), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+      return h > 0 ? `Due in ${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}` : `Due in ${m}:${String(s).padStart(2,"0")}`;
+    }
+
+    async function request(params){
+      const url = new URL(config.endpoint);
+      Object.entries({ ...params, key: config.key }).forEach(([k, v]) => url.searchParams.set(k, v));
+      const res = await fetch(url.toString(), { cache: "no-store" });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "error");
+      serverLast = data.last || {};
+      lastSync = Date.now();
+      return data;
+    }
+
+    function setSync(text, state){
+      $("sync").textContent = text;
+      $("sync").dataset.state = state || "";
+    }
+
+    async function poll(){
+      if (document.hidden) return;
+      try {
+        await request({ action: "state" });
+        setSync(`Updated ${clock(lastSync)}`);
+      } catch (err) {
+        setSync(err.message === "wrong-code" ? "Code doesn't match — set up again" : "Offline — retrying", "error");
+      }
+      render();
+    }
+
+    function build(){
+      const list = $("list");
+      list.innerHTML = "";
+      config.students.forEach(s => {
+        const card = document.createElement("section");
+        card.className = "student";
+        card.dataset.id = s.id;
+        card.innerHTML = `<div class="who"><span class="chip"></span><span class="time"></span><span class="last"></span></div><button class="done">✓ Done</button>`;
+        card.querySelector(".chip").textContent = s.label;
+        card.querySelector(".chip").style.background = s.color;
+        const btn = card.querySelector(".done");
+        btn.setAttribute("aria-label", `Log bathroom trip for ${s.label}`);
+        btn.addEventListener("click", () => onDone(s, btn));
+        list.appendChild(card);
+      });
+    }
+
+    function render(){
+      const now = new Date(), midnight = midnightCT(now), intervalMs = config.intervalMin * 60000;
+      config.students.forEach(s => {
+        const card = document.querySelector(`[data-id="${CSS.escape(s.id)}"]`);
+        if (!card) return;
+        const last = Date.parse(serverLast[s.id] || "") || 0;
+        if (last < midnight) {
+          card.dataset.status = "waiting";
+          card.querySelector(".time").textContent = "No trip yet today";
+          card.querySelector(".last").textContent = "";
+          return;
+        }
+        const remaining = last + intervalMs - now.getTime();
+        card.dataset.status = remaining <= 0 ? "overdue" : remaining <= WARN_MIN * 60000 ? "soon" : "ok";
+        card.querySelector(".time").textContent = formatRemaining(remaining);
+        card.querySelector(".last").textContent = `Last: ${clock(last)}`;
+      });
+    }
+
+    // Two taps (Done, then Confirm) so a phone in a pocket or a stray tap doesn't log a trip
+    async function onDone(s, btn){
+      if (btn.dataset.confirm !== "1") {
+        document.querySelectorAll('.done[data-confirm="1"]').forEach(b => resetButton(b));
+        btn.dataset.confirm = "1";
+        btn.textContent = "Confirm";
+        btn._timer = setTimeout(() => resetButton(btn), CONFIRM_MS);
+        return;
+      }
+      clearTimeout(btn._timer);
+      btn.disabled = true;
+      btn.textContent = "Saving…";
+      try {
+        await request({ action: "reset", student: s.id, label: s.label, source: "phone" });
+        toast(`✓ ${s.label} logged at ${clock(Date.now())}`);
+        setSync(`Updated ${clock(lastSync)}`);
+        if (navigator.vibrate) navigator.vibrate(40);
+      } catch (err) {
+        toast(err.message === "wrong-code" ? "Not saved: code doesn't match" : "Not saved: no connection. Try again.");
+      }
+      btn.disabled = false;
+      resetButton(btn);
+      render();
+    }
+
+    function resetButton(btn){
+      clearTimeout(btn._timer);
+      btn.dataset.confirm = "";
+      btn.textContent = "✓ Done";
+    }
+
+    let toastTimer;
+    function toast(text){
+      const t = $("toast");
+      t.textContent = text;
+      t.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove("show"), 2800);
+    }
+
+    config = readConfig();
+    if (!config) {
+      $("list").innerHTML = `<div class="message">This phone isn't set up yet.<br><br>On the board, open Settings → Set up bathroom timers → Set up a phone, and scan that code.</div>`;
+      $("tip").hidden = true;
+      setSync("");
+    } else if (!config.students.length) {
+      $("list").innerHTML = `<div class="message">No students yet. Add students on the board, then set up this phone again.</div>`;
+      $("tip").hidden = true;
+    } else {
+      build();
+      render();
+      poll();
+      setInterval(render, 1000);
+      setInterval(poll, POLL_MS);
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+    }
+  </script>
+</body>
+</html>

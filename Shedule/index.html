@@ -270,7 +270,23 @@
           <div class="edit-buttons">
             <button class="btn" id="btnBathroomTest">Test connection</button>
             <button class="btn btn-yellow" id="btnBathroomPrint">Print QR codes</button>
+            <button class="btn btn-yellow" id="btnPhoneSetup">Set up a phone</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone setup: one code that sets up the phone button page -->
+    <div class="modal-overlay hidden" id="phoneSetupOverlay" role="dialog" aria-modal="true" aria-labelledby="phoneSetupTitle">
+      <div class="modal bathroom-qr-modal">
+        <div class="modal-header">
+          <div class="modal-title" id="phoneSetupTitle">Set up a phone</div>
+          <button class="xbtn" id="closePhoneSetup" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body bathroom-qr-body">
+          <div class="bathroom-qr-code" id="phoneSetupCode"></div>
+          <div class="hint" id="phoneSetupNote"></div>
+          <button class="btn" id="btnPhoneCopyLink">Copy link to text it</button>
         </div>
       </div>
     </div>

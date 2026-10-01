@@ -14,6 +14,7 @@ const toggleBathroom = document.getElementById("toggleBathroom");
 const btnBathroomSetup = document.getElementById("btnBathroomSetup");
 const bathroomSetupOverlay = document.getElementById("bathroomSetupOverlay");
 const bathroomQrOverlay = document.getElementById("bathroomQrOverlay");
+const phoneSetupOverlay = document.getElementById("phoneSetupOverlay");
 
 let bathroomServerLast = {};
 let bathroomConn = { state: "off", checkedAt: null }; // off | ok | error | wrong-code
@@ -193,15 +194,60 @@ function getScanUrl(student){
   url.searchParams.set("s", student.id);
   url.searchParams.set("n", student.label);
   url.searchParams.set("k", b.key);
-  url.searchParams.set("e", b.endpoint);
+  // Standard Apps Script links only need their deployment ID, which keeps the QR code much simpler
+  const m = b.endpoint.match(/^https:\/\/script\.google\.com\/macros\/s\/([\w-]+)\/exec$/);
+  url.searchParams.set("e", m ? m[1] : b.endpoint);
   return url.toString();
 }
 
+function getEndpointShort(){
+  const b = getBathroom();
+  const m = b.endpoint.match(/^https:\/\/script\.google\.com\/macros\/s\/([\w-]+)\/exec$/);
+  return m ? m[1] : b.endpoint;
+}
+
+// Link for the phone page: carries the Sheet link, code, interval and students
+function getRemoteUrl(){
+  const b = getBathroom();
+  // Compact format keeps the setup QR code scannable: s=id.LABEL.color*id.LABEL.color
+  const students = b.students
+    .map(s => [s.id, s.label.replace(/[.*]/g, ""), s.color.replace("#", "")].join("."))
+    .join("*");
+  const url = new URL("remote.html", location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("e", getEndpointShort());
+  url.searchParams.set("k", b.key);
+  url.searchParams.set("i", b.intervalMin);
+  url.searchParams.set("s", students);
+  return url.toString();
+}
+
+function openPhoneSetup(){
+  const b = getBathroom();
+  const holder = document.getElementById("phoneSetupCode");
+  const note = document.getElementById("phoneSetupNote");
+  const copyBtn = document.getElementById("btnPhoneCopyLink");
+  let problem = "";
+  if (isRunningFromFile()) problem = "Phone setup only works when Sched is opened from its web address (github.io), not from a file on this computer.";
+  else if (!b.endpoint) problem = "Connect the Google Sheet first (Web app link above).";
+  else if (!b.students.length) problem = "Add students first.";
+  holder.innerHTML = problem ? "" : qrSvg(getRemoteUrl(), 6);
+  note.textContent = problem || "Scan with the phone's camera, then add the page to the home screen. If you add or remove students, set up the phone again.";
+  copyBtn.disabled = !!problem;
+  openOverlay(phoneSetupOverlay);
+}
+
+function isRunningFromFile(){
+  return location.protocol === "file:";
+}
+
 function qrSvg(text, cellSize = 4){
-  const qr = qrcode(0, "M");
+  const qr = qrcode(0, "L"); // lowest error correction = fewest, biggest squares
   qr.addData(text);
   qr.make();
-  return qr.createSvgTag({ cellSize, margin: 2, scalable: true });
+  // Wide white border ("quiet zone") helps phone cameras lock on
+  return qr.createSvgTag({ cellSize, margin: 4, scalable: true });
 }
 
 function openBathroomQr(id){
@@ -213,7 +259,10 @@ function openBathroomQr(id){
   const holder = document.getElementById("bathroomQrCode");
   const win = getSchoolDayWindow();
   const note = document.getElementById("bathroomQrNote");
-  if (b.endpoint) {
+  if (isRunningFromFile()) {
+    holder.innerHTML = "";
+    note.textContent = "QR codes only work when Sched is opened from its web address (github.io), not from a file on this computer. Tap Reset now instead.";
+  } else if (b.endpoint) {
     holder.innerHTML = qrSvg(getScanUrl(s));
     note.textContent = "Scan with a phone camera after the trip, or tap Reset now.";
   } else {
@@ -230,6 +279,10 @@ function openBathroomQr(id){
 function printBathroomQrCodes(){
   const b = getBathroom();
   if (!b.endpoint || !b.students.length) return;
+  if (isRunningFromFile()) {
+    alert("QR codes only work when Sched is opened from its web address (github.io), not from a file on this computer. Open Sched from GitHub Pages and print from there.");
+    return;
+  }
   const cards = b.students.map(s => `
     <div class="card">
       <div class="qr">${qrSvg(getScanUrl(s), 6)}</div>
@@ -351,6 +404,7 @@ function setupBathroom(){
   bathroomQrOverlay.addEventListener("click", e => { if (e.target === bathroomQrOverlay) closeOverlay(bathroomQrOverlay); });
   document.addEventListener("keydown", e => {
     if (e.key !== "Escape") return;
+    if (!phoneSetupOverlay.classList.contains("hidden")) { closeOverlay(phoneSetupOverlay); return; }
     closeOverlay(bathroomQrOverlay);
     closeOverlay(bathroomSetupOverlay);
   });
@@ -381,7 +435,7 @@ function setupBathroom(){
     const b = getBathroom();
     const initials = (prompt("Student initials (up to 4 letters). Don't use full names.") || "").trim().toUpperCase().slice(0, 4);
     if (!initials) return;
-    b.students.push({ id: uid(), label: initials, color: BATHROOM_COLORS[b.students.length % BATHROOM_COLORS.length] });
+    b.students.push({ id: Math.random().toString(36).slice(2, 8), label: initials, color: BATHROOM_COLORS[b.students.length % BATHROOM_COLORS.length] });
     saveBathroom();
     renderBathroomSetup();
   });
@@ -397,6 +451,15 @@ function setupBathroom(){
     bathroomRequest({ action: "state" });
   });
   document.getElementById("btnBathroomPrint").addEventListener("click", printBathroomQrCodes);
+  document.getElementById("btnPhoneSetup").addEventListener("click", openPhoneSetup);
+  document.getElementById("closePhoneSetup").addEventListener("click", () => closeOverlay(phoneSetupOverlay));
+  phoneSetupOverlay.addEventListener("click", e => { if (e.target === phoneSetupOverlay) closeOverlay(phoneSetupOverlay); });
+  document.getElementById("btnPhoneCopyLink").addEventListener("click", async () => {
+    const btn = document.getElementById("btnPhoneCopyLink");
+    try { await navigator.clipboard.writeText(getRemoteUrl()); btn.textContent = "Link copied"; }
+    catch { prompt("Copy this link and text it to the phone:", getRemoteUrl()); }
+    setTimeout(() => { btn.textContent = "Copy link to text it"; }, 2000);
+  });
 
   document.addEventListener("visibilitychange", () => { if (!document.hidden) pollBathroom(); });
   setInterval(renderBathroomBox, 1000);

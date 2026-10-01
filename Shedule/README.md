@@ -27,13 +27,20 @@ Tap a student's timer to see their QR code or tap **Reset now**. To reset by sca
 5. Copy the **Web app URL** (it ends in `/exec`) and paste it into **Web app link** in Sched. The status should say **Connected**.
 6. Tap **Print QR codes**.
 
-Every scan or board reset adds a row to the **Bathroom Log** tab of the Sheet. If you edit the Apps Script later, use **Deploy → Manage deployments → Edit → New version** so the link (and your printed QR codes) keep working.
+### Phone buttons (instead of QR codes)
+In **Set up bathroom timers**, tap **Set up a phone** and scan that one code with the phone's camera (or tap **Copy link to text it** and text the link to the phone). The page lists each student with their countdown and a **Done** button: tap **Done**, then **Confirm**. Add the page to the phone's home screen so it opens like an app:
+- **iPhone (Safari):** Share button → **Add to Home Screen**
+- **Android (Chrome):** ⋮ menu → **Add to Home screen**
+
+If you add or remove students, set up the phone again and replace the home-screen icon.
+
+Every scan, phone tap, or board reset adds a row to the **Bathroom Log** tab of the Sheet. If you edit the Apps Script later, use **Deploy → Manage deployments → Edit → New version** so the link (and your printed QR codes) keep working.
 
 Use initials only, never full names. If your district account doesn't allow **Anyone** access for Apps Script, QR resets can't reach the Sheet; the timers still work with **Reset now** on the board.
 
 ## Files
 - `index.html`, `styles.css`, `app.js` — the app
-- `bathroom.js`, `scan.html`, `qrcode.js` — bathroom timers, the phone scan page, and the QR code library (MIT license)
+- `bathroom.js`, `scan.html`, `remote.html`, `qrcode.js` — bathroom timers, the QR scan page, the phone button page, and the QR code library (MIT license)
 - `apps-script/Code.gs` — the Google Sheet script for bathroom timers
 - `transition-chime.mp3` — transition sound
 - `*.png`, `*.jpg`, `*.mp4` — local symbols, images, and step videos
