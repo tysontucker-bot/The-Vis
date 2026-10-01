@@ -53,7 +53,6 @@
       cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;
     }
     .done:active{ transform:scale(.97); }
-    .done[data-confirm="1"]{ background:#43a047; color:#fff; }
     .done:disabled{ opacity:.6; }
     .done:focus-visible{ outline:4px solid #1565c0; outline-offset:3px; }
     .toast{
@@ -64,6 +63,52 @@
     }
     .toast.show{ opacity:1; }
     .message{ background:#fff; border:5px solid var(--border); border-radius:18px; padding:20px; font-weight:800; text-align:center; }
+    /* Log form (bottom sheet) */
+    .sheet-backdrop{
+      position:fixed; inset:0; z-index:20; background:rgba(0,0,0,.45);
+      display:flex; align-items:flex-end; justify-content:center;
+    }
+    .sheet-backdrop[hidden]{ display:none; }
+    .sheet{
+      width:min(560px, 100%); max-height:92vh; max-height:92dvh; overflow:auto;
+      background:#fff; border:5px solid var(--border); border-bottom:none;
+      border-radius:22px 22px 0 0; padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));
+    }
+    .sheet-head{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .sheet-head .chip{ align-self:center; }
+    .sheet-time{ font-weight:900; font-size:1.1rem; }
+    .group-label{ font-weight:900; font-size:.95rem; margin:12px 2px 6px; }
+    .tiles{ display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; }
+    .tile{
+      font:inherit; font-weight:800; font-size:.78rem; line-height:1.1;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+      min-height:78px; padding:6px 2px; border:3px solid var(--border); border-radius:12px;
+      background:#fff; color:#111; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+    }
+    .tile .ico{ font-size:1.6rem; line-height:1; }
+    .tile[aria-pressed="true"]{ background:var(--yellow); box-shadow:inset 0 0 0 3px #111; }
+    .tile:focus-visible, .pick:focus-visible, .sheet-actions button:focus-visible{ outline:4px solid #1565c0; outline-offset:2px; }
+    .picks{ display:flex; flex-wrap:wrap; gap:6px; }
+    .pick{
+      font:inherit; font-weight:900; font-size:1rem; min-height:48px; min-width:56px; padding:4px 12px;
+      border:3px solid var(--border); border-radius:12px; background:#fff; color:#111; cursor:pointer;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; touch-action:manipulation;
+    }
+    .picks[data-group="prompt"]{ display:grid; grid-template-columns:repeat(5, 1fr); }
+    .picks[data-group="prompt"] .pick{ min-width:0; padding:4px 2px; }
+    .pick, .tile{ -webkit-tap-highlight-color:transparent; }
+    .pick small{ font-size:.66rem; font-weight:800; }
+    .pick[aria-pressed="true"]{ background:var(--yellow); box-shadow:inset 0 0 0 3px #111; }
+    .auto-n{ margin-top:10px; font-weight:900; color:#6a1b9a; }
+    .auto-n[hidden]{ display:none; }
+    .sheet-actions{ display:grid; grid-template-columns:1fr 2fr; gap:10px; margin-top:16px; }
+    .sheet-actions button{
+      font:inherit; font-weight:900; font-size:1.1rem; min-height:56px;
+      border:4px solid var(--border); border-radius:14px; cursor:pointer;
+    }
+    .btn-cancel{ background:#fff; }
+    .btn-save{ background:#43a047; color:#fff; }
+    .btn-save:disabled{ background:#cfd8cf; color:#555; cursor:not-allowed; }
     .tip{ font-size:.9rem; font-weight:700; color:#222; text-align:center; padding:4px 10px 16px; }
   </style>
 </head>
@@ -73,11 +118,53 @@
     <div class="sync" id="sync" aria-live="polite">Connecting…</div>
   </header>
   <main id="list"></main>
-  <div class="tip" id="tip">Tap <b>Done</b>, then tap again to confirm.</div>
+  <div class="tip" id="tip">Tap <b>Done</b>, choose what happened, then <b>Save</b>.</div>
+
+  <div class="sheet-backdrop" id="sheetBackdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+      <div class="sheet-head">
+        <span class="chip" id="sheetChip"></span>
+        <span class="sheet-time" id="sheetTitle"></span>
+      </div>
+
+      <div class="group-label">What happened? <span style="font-weight:700">(pick all that apply)</span></div>
+      <div class="tiles" id="tiles">
+        <button class="tile" data-field="sat" aria-pressed="false"><span class="ico">🚽</span>Sat</button>
+        <button class="tile" data-field="void" aria-pressed="false"><span class="ico">💧</span>Voided</button>
+        <button class="tile" data-field="bm" aria-pressed="false"><span class="ico">💩</span>BM</button>
+        <button class="tile" data-field="pullup" aria-pressed="false"><span class="ico">🩲</span>Changed Pull-Up</button>
+        <button class="tile" data-field="accident" aria-pressed="false"><span class="ico">🚫</span>Accident</button>
+      </div>
+      <div class="auto-n" id="autoN" hidden>N — Did not go (logged automatically)</div>
+
+      <div id="stoolGroup" hidden>
+        <div class="group-label">Stool</div>
+        <div class="picks" data-group="stool">
+          <button class="pick" data-value="" aria-pressed="true">Normal</button>
+          <button class="pick" data-value="LS1" aria-pressed="false">LS1<small>Loose</small></button>
+          <button class="pick" data-value="LS2" aria-pressed="false">LS2<small>Diarrhea</small></button>
+        </div>
+      </div>
+
+      <div class="group-label">Prompt level</div>
+      <div class="picks" data-group="prompt">
+        <button class="pick" data-value="I" aria-pressed="false">I<small>Indep.</small></button>
+        <button class="pick" data-value="VM" aria-pressed="false">VM<small>Visual</small></button>
+        <button class="pick" data-value="V" aria-pressed="false">V<small>Verbal</small></button>
+        <button class="pick" data-value="G" aria-pressed="false">G<small>Gestural</small></button>
+        <button class="pick" data-value="P" aria-pressed="false">P<small>Physical</small></button>
+      </div>
+
+      <div class="sheet-actions">
+        <button class="btn-cancel" id="btnCancel">Cancel</button>
+        <button class="btn-save" id="btnSave" disabled>Save</button>
+      </div>
+    </div>
+  </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
-    const POLL_MS = 15000, WARN_MIN = 15, CONFIRM_MS = 3000;
+    const POLL_MS = 15000, WARN_MIN = 15;
     const $ = id => document.getElementById(id);
     let config = null, serverLast = {}, lastSync = null;
 
@@ -152,7 +239,7 @@
         card.querySelector(".chip").style.background = s.color;
         const btn = card.querySelector(".done");
         btn.setAttribute("aria-label", `Log bathroom trip for ${s.label}`);
-        btn.addEventListener("click", () => onDone(s, btn));
+        btn.addEventListener("click", () => onDone(s));
         list.appendChild(card);
       });
     }
@@ -176,36 +263,74 @@
       });
     }
 
-    // Two taps (Done, then Confirm) so a phone in a pocket or a stray tap doesn't log a trip
-    async function onDone(s, btn){
-      if (btn.dataset.confirm !== "1") {
-        document.querySelectorAll('.done[data-confirm="1"]').forEach(b => resetButton(b));
-        btn.dataset.confirm = "1";
-        btn.textContent = "Confirm";
-        btn._timer = setTimeout(() => resetButton(btn), CONFIRM_MS);
-        return;
-      }
-      clearTimeout(btn._timer);
+    /* ---------- log form ---------- */
+    let formStudent = null;
+    const form = { sat:false, void:false, bm:false, pullup:false, accident:false, stool:"", prompt:"" };
+
+    function onDone(s){
+      formStudent = s;
+      Object.assign(form, { sat:false, void:false, bm:false, pullup:false, accident:false, stool:"", prompt:"" });
+      $("sheetChip").textContent = s.label;
+      $("sheetChip").style.background = s.color;
+      $("sheetTitle").textContent = clock(Date.now());
+      syncForm();
+      $("sheetBackdrop").hidden = false;
+      document.querySelector(".tile").focus();
+    }
+
+    function closeForm(){
+      $("sheetBackdrop").hidden = true;
+      formStudent = null;
+    }
+
+    function syncForm(){
+      document.querySelectorAll(".tile").forEach(t => t.setAttribute("aria-pressed", String(form[t.dataset.field])));
+      document.querySelectorAll(".picks").forEach(g => {
+        const value = form[g.dataset.group];
+        g.querySelectorAll(".pick").forEach(p => p.setAttribute("aria-pressed", String(p.dataset.value === value)));
+      });
+      $("stoolGroup").hidden = !form.bm;
+      $("autoN").hidden = !(form.sat && !form.void && !form.bm);
+      $("btnSave").disabled = !(form.sat || form.void || form.bm || form.pullup || form.accident);
+    }
+
+    document.querySelectorAll(".tile").forEach(t => t.addEventListener("click", () => {
+      form[t.dataset.field] = !form[t.dataset.field];
+      if (t.dataset.field === "bm" && !form.bm) form.stool = "";
+      syncForm();
+    }));
+    document.querySelectorAll(".picks").forEach(g => g.querySelectorAll(".pick").forEach(p => p.addEventListener("click", () => {
+      const group = g.dataset.group;
+      // Prompt level can be tapped again to clear it
+      form[group] = group === "prompt" && form.prompt === p.dataset.value ? "" : p.dataset.value;
+      syncForm();
+    })));
+    $("btnCancel").addEventListener("click", closeForm);
+    $("sheetBackdrop").addEventListener("click", e => { if (e.target === $("sheetBackdrop")) closeForm(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("sheetBackdrop").hidden) closeForm(); });
+
+    $("btnSave").addEventListener("click", async () => {
+      if (!formStudent) return;
+      const s = formStudent, btn = $("btnSave");
       btn.disabled = true;
       btn.textContent = "Saving…";
+      const params = { action:"reset", student:s.id, label:s.label, source:"phone" };
+      ["sat", "void", "bm", "pullup", "accident"].forEach(f => { if (form[f]) params[f] = "1"; });
+      if (form.bm && form.stool) params.stool = form.stool;
+      if (form.prompt) params.prompt = form.prompt;
       try {
-        await request({ action: "reset", student: s.id, label: s.label, source: "phone" });
+        await request(params);
+        closeForm();
         toast(`✓ ${s.label} logged at ${clock(Date.now())}`);
         setSync(`Updated ${clock(lastSync)}`);
         if (navigator.vibrate) navigator.vibrate(40);
       } catch (err) {
         toast(err.message === "wrong-code" ? "Not saved: code doesn't match" : "Not saved: no connection. Try again.");
       }
-      btn.disabled = false;
-      resetButton(btn);
+      btn.textContent = "Save";
+      syncForm();
       render();
-    }
-
-    function resetButton(btn){
-      clearTimeout(btn._timer);
-      btn.dataset.confirm = "";
-      btn.textContent = "✓ Done";
-    }
+    });
 
     let toastTimer;
     function toast(text){
