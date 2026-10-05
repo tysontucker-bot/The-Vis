@@ -28,7 +28,7 @@ Tap a student's timer to see their QR code or tap **Reset now**. To reset by sca
 6. Tap **Print QR codes**.
 
 ### Phone buttons (instead of QR codes)
-In **Set up bathroom timers**, tap **Set up a phone** and scan that one code with the phone's camera (or tap **Copy link to text it** and text the link to the phone). The page lists each student with their countdown and a **Done** button. Tap **Done**, choose what happened (Sat, Voided, BM, Changed Pull-Up, Accident; stool type LS1/LS2 if BM; prompt level I/VM/V/G/P), then **Save**. "N – Did not go" is filled in automatically when Sat is chosen without Voided or BM. Each save adds a row to the **Toileting Log** tab of the Sheet. Add the page to the phone's home screen so it opens like an app:
+In **Set up bathroom timers**, tap **Set up a phone** and scan that one code with the phone's camera (or tap **Copy link to text it** and text the link to the phone). The page lists each student with their countdown and a **Done** button. Tap **Done**, choose what happened (Sat, Dry Pull-Up, Changed Pull-Up, Accident; Voided and BM each as Toilet, Pull-Up, or Both; stool type LS1/LS2 if BM; prompt level I/VM/V/G/P), then **Save**. Choosing Pull-Up or Both also selects Changed Pull-Up (tap it to undo). "N – Did not go" is filled in automatically when Sat is chosen without voiding or a BM in the toilet. Each save adds a row to the **Toileting Log** tab of the Sheet. Add the page to the phone's home screen so it opens like an app:
 - **iPhone (Safari):** Share button → **Add to Home Screen**
 - **Android (Chrome):** ⋮ menu → **Add to Home screen**
 
