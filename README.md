@@ -1,2 +1,0 @@
-# The-Vis
-Visual Schedule
