@@ -1148,3 +1148,25 @@ body.substitute-mode-active .layout{
 
 #phoneSetupOverlay .bathroom-qr-modal{ width:min(620px, 94vw); }
 #phoneSetupCode svg{ width:min(480px, 80vw, 62vh); }
+
+/* ---------- Phone remote: full-screen viewer ---------- */
+.remote-viewer{
+  position:fixed;
+  inset:0;
+  z-index:850; /* above the board, below video windows (900) and menus (1000) */
+  display:flex;
+  flex-direction:column;
+  background:#000;
+}
+.remote-viewer-bar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:6px 10px;
+  background:var(--yellow);
+  border-bottom:4px solid var(--border);
+}
+.remote-viewer-title{ font-weight:900; font-size:1.1rem; flex:1; }
+.remote-viewer iframe{ flex:1; width:100%; border:0; background:#fff; }
+.settings-field-stack{ flex-direction:column; align-items:stretch; gap:4px; }
+.settings-url{ font:inherit; font-size:.85rem; padding:4px 6px; border-radius:8px; border:2px solid #ccc; width:100%; }
