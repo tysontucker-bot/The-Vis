@@ -1,15 +1,15 @@
 # Sched — Classroom Visual Schedule
 
-A visual schedule board for the classroom, hosted on GitHub Pages. It shows the full day as symbol cards, plus a draggable **Now / Next** timer that counts down each activity and chimes at transitions.
+A visual schedule board for the classroom, hosted on GitHub Pages. Everything has a fixed spot: the full day across the top, a large **Now** card (activity on the left, a 60-minute Time Timer-style face on the right) in the center, **Next** on the right (with a video slot under it while a video plays), and bathroom timers on the left. It chimes at transitions.
 
 ## Everyday use
-- **Now / Next box** — drag it anywhere (works with mouse or touch). Drag the corner handle to resize.
-- **Details** — activities with mini-schedule steps open their steps automatically when they start.
+- **Now** — the activity on the left, a traditional 60-minute timer on the right (0 at the top with 5 on the right; the red wedge shows minutes left and shrinks back toward 0; anything an hour or longer shows a full disc). The card turns amber in the last two minutes.
+- **Videos** — always play in the slot under Next, one at a time.
 - **Sound** — browsers block audio until someone taps the page. If you see "Tap to turn on sound", tap it once in the morning.
 - **Weekends** — the board stays quiet on Saturday and Sunday unless *Settings → Run on weekends* is on.
 
 ## Settings
-- **Edit Schedule** — drag cards to reorder, change times, names, symbols, and mini-schedule steps.
+- **Edit Schedule** — drag cards to reorder; change times, names, and symbols.
 - **Day ends at** — when the last activity (Bus) ends. Defaults to 2:20.
 - **Substitute** — shows a "Subs click here" button and makes the Now icon open directions for that activity. The time ranges in the sub directions come from the live schedule, so they update when you edit it.
 - **Export / Import Schedule** — saves your edited schedule to a file and restores it. Your schedule is stored only in this browser, so export a backup after big changes or before switching computers.
@@ -38,8 +38,20 @@ Every phone save, QR scan, or board reset adds a row to the **Toileting Log** ta
 
 Use initials only, never full names. If your district account doesn't allow **Anyone** access for Apps Script, QR resets can't reach the Sheet; the timers still work with **Reset now** on the board.
 
+## Phone remote (Board tab)
+Phones set up for bathroom timers also get a **Board** tab that controls the classroom computer:
+- **Who's here** — opens full-screen on the board (Open / Close).
+- **Meetings** — Morning or Afternoon Meeting full-screen on the board; the Afternoon Meeting projector starts automatically.
+- **Videos** — the board's video list plus Sensory; tapping one plays it (replacing any video already playing).
+- **Close video** and **Close all** stay pinned at the bottom of the screen.
+
+The board checks for phone commands every 2 seconds during the school day, so expect a 2–3 second delay. Turn it off in **Settings → Phone Remote**. Things that open a new tab (PowerSchool, websites) still need a click on the computer.
+
+**Who's here:** Canva usually only allows its designs inside another page through an embed link. In Canva, open the design, then **Share → More → Embed**, copy the link from the embed box (it ends in `?embed`), and paste it into **Settings → Phone Remote → Who's here link**.
+
 ## Files
 - `index.html`, `styles.css`, `app.js` — the app
+- `board-remote.js` — lets phones control the board
 - `bathroom.js`, `scan.html`, `remote.html`, `qrcode.js` — bathroom timers, the QR scan page, the phone button page, and the QR code library (MIT license)
 - `apps-script/Code.gs` — the Google Sheet script for bathroom timers
 - `transition-chime.mp3` — transition sound
