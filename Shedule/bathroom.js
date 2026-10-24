@@ -380,14 +380,7 @@ function setupBathroom(){
   getBathroom();
   saveState();
 
-  const saved = safeParse(localStorage.getItem(BATHROOM_POS_KEY));
-  if (saved && typeof saved.x === "number") moveWithinBoard(bathroomBox, saved.x, saved.y);
-  const handle = bathroomBox.querySelector(".bathroom-head");
-  enableDrag(bathroomBox, handle);
-  handle.addEventListener("pointerup", () => {
-    const r = bathroomBox.getBoundingClientRect();
-    localStorage.setItem(BATHROOM_POS_KEY, JSON.stringify({ x: r.left, y: r.top }));
-  });
+  // Fixed layout: the bathroom box has a permanent spot on the left of the board
 
   toggleBathroom.addEventListener("change", () => {
     getBathroom().enabled = toggleBathroom.checked;

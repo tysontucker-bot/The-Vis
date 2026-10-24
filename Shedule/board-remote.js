@@ -63,7 +63,7 @@ function autoStartProjector(){
 }
 
 function closeVideoWindows(){
-  floatLayer.querySelectorAll(".video-float").forEach(el => el.remove());
+  document.querySelectorAll(".video-float").forEach(el => el.remove());
 }
 
 function runRemoteCommand(cmd){
@@ -103,7 +103,7 @@ function runRemoteCommand(cmd){
 /* ---------- status for the phone ---------- */
 
 function getRemoteStatus(){
-  const video = floatLayer.querySelector(".video-float");
+  const video = document.querySelector(".video-float");
   return JSON.stringify({
     viewer: remoteViewerKind,
     video: video ? (video.dataset.title || "Video") : "",

@@ -1170,3 +1170,200 @@ body.substitute-mode-active .layout{
 .remote-viewer iframe{ flex:1; width:100%; border:0; background:#fff; }
 .settings-field-stack{ flex-direction:column; align-items:stretch; gap:4px; }
 .settings-url{ font:inherit; font-size:.85rem; padding:4px 6px; border-radius:8px; border:2px solid #ccc; width:100%; }
+
+/* =====================================================================
+   Fixed layout (nothing moves): schedule strip on top, then
+   bathroom | Now with disc timer | Next + video slot
+   ===================================================================== */
+.layout{
+  display:grid;
+  grid-template-rows:auto minmax(0, 1fr);
+  gap:14px;
+}
+.schedule-grid{
+  height:auto;
+  grid-template-rows:none;
+  grid-auto-rows:auto;
+  align-content:start;
+  gap:8px;
+}
+.card{
+  min-height:0;
+  padding:6px 8px;
+  gap:6px;
+  border-width:4px;
+  border-radius:10px;
+}
+.card:hover{ transform:none; }
+.card.active{ transform:none; box-shadow:0 0 0 4px #000; }
+.card-icon{ width:clamp(36px, 5.2vh, 64px); height:clamp(36px, 5.2vh, 64px); flex:0 0 auto; }
+.card-name{ font-size:clamp(.8rem, 1.6vh, 1.05rem); }
+.card-time{ font-size:clamp(.72rem, 1.4vh, .95rem); }
+.card.completed{ opacity:.6; }
+.card.completed::after{ font-size:2rem; inset:auto 6px 0 auto; }
+
+.board-main{
+  display:flex;
+  gap:14px;
+  min-height:0;
+}
+
+/* Bathroom: fixed column on the left */
+.bathroom-box{
+  position:relative;
+  left:auto;
+  top:auto;
+  z-index:auto;
+  flex:0 0 clamp(190px, 16vw, 260px);
+  align-self:flex-start;
+  max-height:100%;
+  overflow:auto;
+}
+.bathroom-head{ cursor:default; }
+
+/* Now: the biggest thing on the board */
+.current-box{
+  position:relative;
+  left:auto;
+  top:auto;
+  width:auto;
+  height:auto;
+  flex:2 1 0;
+  min-width:0;
+  cursor:default;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:clamp(4px, 1vh, 12px);
+  padding:clamp(8px, 1.6vh, 18px);
+  z-index:auto;
+  touch-action:auto;
+  transition:border-color .3s, background-color .3s;
+}
+.current-box:active{ cursor:default; }
+.current-box::before{ content:none; }
+.current-box .current-label{ font-size:clamp(1rem, 2.6vh, 1.7rem); }
+.now-title{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:clamp(8px, 1.5vw, 18px);
+  max-width:100%;
+}
+.current-box .current-icon{ width:clamp(56px, 11vh, 130px); height:clamp(56px, 11vh, 130px); }
+.current-box .current-name{ font-size:clamp(1.4rem, 4.4vh, 3rem); text-shadow:none; }
+.timer-wrap{
+  flex:1 1 auto;
+  min-height:0;
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.timer-svg{ height:100%; max-height:46vh; width:auto; max-width:100%; aspect-ratio:1/1; display:block; }
+.timer-face{ fill:#fff; stroke:#000; stroke-width:8; }
+.timer-wedge{ fill:#e53935; }
+.timer-ticks line{ stroke:#000; stroke-width:4; stroke-linecap:round; }
+.timer-hub{ fill:#000; }
+.current-box .timer-center-readout{ font-size:clamp(.95rem, 2.4vh, 1.5rem); color:#333; text-shadow:none; }
+/* Pre-transition cue: last two minutes */
+.current-box.ending-soon{ border-color:#FF8F00; background:#FFF3D6; }
+
+/* Right column: Next, with the video slot underneath while a video plays */
+.right-col{
+  flex:1.3 1 0;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  min-height:0;
+}
+.next-card{
+  flex:1 1 auto;
+  min-height:0;
+  background:#fff;
+  border:5px solid var(--border);
+  border-radius:18px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:clamp(4px, 1vh, 10px);
+  padding:10px;
+  text-align:center;
+}
+.next-card .current-label{ font-size:clamp(.95rem, 2.2vh, 1.4rem); }
+.next-card .current-icon{ width:clamp(48px, 13vh, 150px); height:clamp(48px, 13vh, 150px); }
+.next-card .current-name{ font-size:clamp(1.1rem, 3vh, 2rem); text-shadow:none; }
+.video-slot{
+  flex:0 0 auto;
+  width:100%;
+  aspect-ratio:16/9;
+  max-height:52%;
+  border:5px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+  background:#000;
+}
+.video-slot .float.in-slot{
+  position:static;
+  width:100% !important;
+  height:100% !important;
+  border:0;
+  border-radius:0;
+}
+.video-slot .float.in-slot .float-header{ height:36px; border-bottom-width:4px; padding:3px 8px; cursor:default; }
+.video-slot .float.in-slot .float-close{ width:30px; height:30px; }
+.video-slot .float.in-slot .float-body{ height:calc(100% - 36px); }
+.video-slot .float.in-slot .float-resize{ display:none; }
+.float-header{ cursor:default; }
+.float-header:active{ cursor:default; }
+
+/* Substitute button sits at the right edge; keep the columns clear of it */
+body.substitute-mode-active .layout{ padding-right:140px; }
+
+/* Now/Next only: with the schedule strip hidden, the main area fills the whole screen */
+.layout:has(> .schedule-grid.hidden){ grid-template-rows:minmax(0, 1fr); }
+.layout:has(> .schedule-grid.hidden) .timer-svg{ max-height:60vh; }
+.layout:has(> .schedule-grid.hidden) .current-box .current-icon{ width:clamp(64px, 15vh, 170px); height:clamp(64px, 15vh, 170px); }
+.layout:has(> .schedule-grid.hidden) .current-box .current-name{ font-size:clamp(1.6rem, 5.4vh, 3.6rem); }
+.layout:has(> .schedule-grid.hidden) .next-card .current-icon{ width:clamp(56px, 18vh, 200px); height:clamp(56px, 18vh, 200px); }
+.layout:has(> .schedule-grid.hidden) .next-card .current-name{ font-size:clamp(1.3rem, 4vh, 2.6rem); }
+
+/* Now card split in two: Now (picture + name) on the left, the 60-minute timer on the right */
+.current-box{
+  flex-direction:row;
+  align-items:stretch;
+  gap:0;
+  padding:0;
+}
+.now-side,
+.timer-side{
+  flex:1 1 0;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:clamp(6px, 1.4vh, 16px);
+  padding:clamp(8px, 1.6vh, 18px);
+}
+.timer-side{ border-left:6px solid var(--border); }
+.now-side .now-title{ flex-direction:column; gap:clamp(6px, 1.2vh, 14px); text-align:center; }
+.current-box .now-side .current-icon{ width:clamp(70px, 22vh, 260px); height:clamp(70px, 22vh, 260px); }
+.current-box .now-side .current-name{ font-size:clamp(1.4rem, 4.6vh, 3.2rem); }
+.timer-side .timer-wrap{ flex:1 1 auto; min-height:0; width:100%; }
+.timer-side .timer-svg{ height:100%; max-height:44vh; }
+.timer-ticks line.minor{ stroke-width:2; }
+.timer-ticks line.major{ stroke-width:4; }
+.timer-numbers text{
+  font:900 15px "Nunito", system-ui, sans-serif;
+  fill:#000;
+  text-anchor:middle;
+  dominant-baseline:central;
+}
+/* Now/Next-only mode has more room */
+.layout:has(> .schedule-grid.hidden) .current-box .now-side .current-icon{ width:clamp(80px, 28vh, 320px); height:clamp(80px, 28vh, 320px); }
+.layout:has(> .schedule-grid.hidden) .timer-side .timer-svg{ max-height:62vh; }

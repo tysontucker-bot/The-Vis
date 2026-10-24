@@ -412,8 +412,28 @@ function setTimerState(activeStartSec, nextStartSec) {
 
 function clearTimerState() {
   timerState = null;
-  timerDisk.style.background = "transparent";
+  drawTimer(0);
+  currentBox.classList.remove("ending-soon");
   timerCenterReadout.textContent = "--:--";
+}
+
+const timerWedge = document.getElementById("timerWedge");
+const TIMER_R = 86;
+
+// Draws the red wedge: it starts at 0 (12 o'clock), extends clockwise (5 minutes is on the right),
+// and shrinks back toward 0 as time runs out. fraction: 1 = full disc, 0 = empty.
+function drawTimer(fraction){
+  const f = clamp(Number(fraction) || 0, 0, 1);
+  if (f <= 0.0005) { timerWedge.setAttribute("d", ""); return; }
+  if (f >= 0.9995) {
+    timerWedge.setAttribute("d", `M100 ${100 - TIMER_R} a${TIMER_R} ${TIMER_R} 0 1 0 0.01 0 Z`);
+    return;
+  }
+  const angle = f * 2 * Math.PI;
+  const x = 100 + TIMER_R * Math.sin(angle);
+  const y = 100 - TIMER_R * Math.cos(angle);
+  const large = f > 0.5 ? 1 : 0;
+  timerWedge.setAttribute("d", `M100 100 L100 ${100 - TIMER_R} A${TIMER_R} ${TIMER_R} 0 ${large} 1 ${x.toFixed(2)} ${y.toFixed(2)} Z`);
 }
 
 function updateTimerDiskFrame() {
@@ -427,10 +447,10 @@ function updateTimerDiskFrame() {
   const elapsed = Math.min(total, Math.max(0, nowTotalSec - activeStartSec));
   const remaining = Math.max(0, 1 - elapsed / total);
   const remainingSec = Math.max(0, nextStartSec - nowTotalSec);
-  const fillPercent = remaining * 100;
-  const fillStartPercent = 100 - fillPercent;
-  timerDisk.style.background =
-    `linear-gradient(to bottom, transparent 0% ${fillStartPercent}%, ${TIMER_COLOR} ${fillStartPercent}% 100%)`;
+  // Traditional 60-minute face: one full disc = 60 minutes; longer activities show full until under an hour
+  drawTimer(Math.min(remainingSec, 3600) / 3600);
+  // Pre-transition cue: the Now card turns amber in the last two minutes
+  currentBox.classList.toggle("ending-soon", remainingSec > 0 && remainingSec <= 120);
   timerCenterReadout.textContent = formatCountdownClock(remainingSec);
 }
 
@@ -475,8 +495,6 @@ function setupSoundUnlock(){
 render();
 setupClock();
 startTimerRAF();
-setupCurrentBoxDrag();
-setupTimerResize();
 setupVideos();
 setupMeetings();
 setupWebsites();
@@ -676,7 +694,7 @@ function render(){
 }
 
 function renderCard(a){
-  const hasSteps = Array.isArray(a.steps) && a.steps.length > 0;
+  const hasSteps = false; // mini-schedules were retired; any saved steps are ignored
   const substituteEnabled = isSubstituteModeEnabled() && !editMode;
 
   const card = document.createElement("div");
@@ -878,12 +896,12 @@ function tickSchedule(){
       // show countdown text
       currentRemaining.textContent =
         `Starts in ${formatRemaining(minsUntil).replace(" remaining","")}`;
-      timerDisk.style.background =
-        `linear-gradient(to bottom, ${TIMER_COLOR} 0% 100%)`;
+      drawTimer(Math.min(Math.max(0, startMin * 60 - nowTotalSec), 3600) / 3600);
       timerCenterReadout.textContent = formatCountdownClock(Math.max(0, startMin * 60 - nowTotalSec));
 
-      // Before schedule start, keep the disk fully filled and show a numeric countdown.
-      clearTimerState();
+      // Before schedule start, keep the disc full and show a numeric countdown.
+      timerState = null;
+      currentBox.classList.remove("ending-soon");
     } else {
       setCurrentDisplay(null, null);
       setNextDisplay(null);
@@ -939,9 +957,6 @@ function tickSchedule(){
     lastActiveId = active.id;
     // Chime only on a real transition, not when the page is first opened mid-activity
     if (!isFirstTick) playTransitionSound();
-    if (Array.isArray(active.steps) && active.steps.length) {
-      renderDetailsWindow(active);
-    }
   }
 
   setCurrentDisplay(active, remaining);
@@ -986,9 +1001,8 @@ function setCurrentDisplay(activity, remainingMinutes){
   currentName.textContent = activity.name;
   currentRemaining.textContent = formatRemaining(remainingMinutes);
 
-  const hasSteps = Array.isArray(activity.steps) && activity.steps.length > 0;
-  btnDetails.classList.toggle("hidden", !hasSteps);
-  currentBox.classList.toggle("has-steps", hasSteps);
+  btnDetails.classList.add("hidden");
+  currentBox.classList.remove("has-steps");
   syncCurrentIconSubstituteState();
 }
 
@@ -1522,7 +1536,7 @@ async function openSensoryRandomFloat(){
 
   frame.appendChild(header);
   frame.appendChild(body);
-  floatLayer.appendChild(frame);
+  placeInVideoSlot(frame);
 
   const resize = document.createElement("div");
   resize.className = "float-resize";
@@ -1573,6 +1587,22 @@ async function openSensoryRandomFloat(){
   }
 }
 
+const videoSlot = document.getElementById("videoSlot");
+
+// Every video plays in the fixed slot under Next; only one at a time
+function placeInVideoSlot(frame){
+  videoSlot.querySelectorAll(".video-float").forEach(el => el.remove());
+  document.querySelectorAll("#floatLayer .video-float").forEach(el => el.remove());
+  frame.classList.add("in-slot");
+  frame.style.left = "";
+  frame.style.top = "";
+  videoSlot.appendChild(frame);
+  videoSlot.classList.remove("hidden");
+}
+new MutationObserver(() => {
+  videoSlot.classList.toggle("hidden", !videoSlot.querySelector(".video-float"));
+}).observe(videoSlot, { childList: true });
+
 function openVideoFloat(title, youtubeId, autoplay = false){
   const frame = document.createElement("div");
   frame.className = "float video-float";
@@ -1606,7 +1636,7 @@ function openVideoFloat(title, youtubeId, autoplay = false){
 
   frame.appendChild(header);
   frame.appendChild(body);
-  floatLayer.appendChild(frame);
+  placeInVideoSlot(frame);
 
   // resize handle (bottom-right)
   const resize = document.createElement("div");
@@ -1653,7 +1683,7 @@ function openLocalVideoFloat(title, url){
 
   frame.appendChild(header);
   frame.appendChild(body);
-  floatLayer.appendChild(frame);
+  placeInVideoSlot(frame);
 
   // resize handle (bottom-right)
   const resize = document.createElement("div");
@@ -1831,6 +1861,7 @@ function setupFreeResize(frame, handle){
 }
 
 function dragWithinBoard(frame, handle){
+  return; // fixed layout: windows stay where they open
   let dragging = false;
   let startX = 0, startY = 0;
   let startL = 0, startT = 0;
@@ -1866,6 +1897,7 @@ function dragWithinBoard(frame, handle){
 /* ------------------ enableDrag helper ------------------ */
 
 function enableDrag(element, handle){
+  return; // fixed layout: nothing on the board can be dragged
   let dragging = false;
   let startX = 0, startY = 0;
   let startL = 0, startT = 0;
@@ -2902,6 +2934,8 @@ function applyDisplayPreferences(){
   }
   scheduleGrid.classList.toggle("hidden", !prefs.showFullSchedule);
   currentBox.classList.toggle("hidden", !prefs.showNowNext);
+  const nextCard = document.getElementById("nextCard");
+  if (nextCard) nextCard.classList.toggle("hidden", !prefs.showNowNext);
   scheduleGrid.setAttribute("aria-hidden", String(!prefs.showFullSchedule));
   currentBox.setAttribute("aria-hidden", String(!prefs.showNowNext));
 }
