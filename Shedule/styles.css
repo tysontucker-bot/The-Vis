@@ -1367,3 +1367,56 @@ body.substitute-mode-active .layout{ padding-right:140px; }
 /* Now/Next-only mode has more room */
 .layout:has(> .schedule-grid.hidden) .current-box .now-side .current-icon{ width:clamp(80px, 28vh, 320px); height:clamp(80px, 28vh, 320px); }
 .layout:has(> .schedule-grid.hidden) .timer-side .timer-svg{ max-height:62vh; }
+
+/* ---------- Bigger pictures + color to separate Now from Next ---------- */
+/* Pictures size themselves to the space they have, so they fill it without spilling over */
+.now-side, .next-card{ container-type:size; }
+.current-box .now-side .current-icon,
+.layout:has(> .schedule-grid.hidden) .current-box .now-side .current-icon{
+  width:min(78cqw, 56cqh, 420px);
+  height:min(78cqw, 56cqh, 420px);
+}
+.current-box .now-side .current-name,
+.layout:has(> .schedule-grid.hidden) .current-box .now-side .current-name{
+  font-size:clamp(1.3rem, min(9cqh, 11cqw), 3.6rem);
+}
+.now-side .current-label{ font-size:clamp(.95rem, 5cqh, 1.7rem); }
+.next-card .current-icon,
+.layout:has(> .schedule-grid.hidden) .next-card .current-icon{
+  width:min(70cqw, 52cqh, 360px);
+  height:min(70cqw, 52cqh, 360px);
+}
+.next-card .current-name,
+.layout:has(> .schedule-grid.hidden) .next-card .current-name{
+  font-size:clamp(1.05rem, min(9cqh, 10cqw), 2.6rem);
+}
+.next-card .current-label{ font-size:clamp(.85rem, 6cqh, 1.4rem); }
+.current-icon{ object-fit:contain; border-radius:12px; }
+
+/* Now = soft yellow, matching the highlighted card in the schedule strip */
+.now-side{ background:#FFF1B8; }
+.current-box .now-side .current-icon{ background:#fff; border:4px solid #000; }
+/* Next = quieter gray, "coming up" */
+.next-card{ background:#EDEDED; }
+.next-card .current-icon{ background:#fff; border:3px solid #555; opacity:.92; }
+.next-card .current-label, .next-card .current-name{ color:#333; }
+/* Last two minutes: the Now side warms to amber too */
+.current-box.ending-soon .now-side{ background:#FFD98A; }
+.current-box.ending-soon .timer-side{ background:#fff; }
+/* Pictures sit on their own white tile now, so don't blend them into the colored background */
+.now-side .current-icon, .next-card .current-icon{ mix-blend-mode:normal; }
+/* Now's picture is always the biggest; Next's stays clearly smaller */
+.current-box .now-side .current-icon,
+.layout:has(> .schedule-grid.hidden) .current-box .now-side .current-icon{
+  width:min(84cqw, 60cqh, 440px);
+  height:min(84cqw, 60cqh, 440px);
+}
+.next-card .current-icon,
+.layout:has(> .schedule-grid.hidden) .next-card .current-icon{
+  width:min(52cqw, 36cqh, 230px);
+  height:min(52cqw, 36cqh, 230px);
+}
+/* Next card color */
+.next-card{ background:#DDF0C8; }
+.next-card .current-icon{ border-color:#000; opacity:1; }
+.next-card .current-label, .next-card .current-name{ color:#111; }
